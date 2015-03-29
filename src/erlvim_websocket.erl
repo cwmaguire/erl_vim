@@ -24,7 +24,7 @@
 -export([handle/2]).
 -export([terminate/3]).
 
--record(state, {conn :: pid()}).
+-record(state, {mode :: pid()}).
 
 init(_, _Req, _Opts) ->
     io:format("Websocket handler init (~p)~n", [self()]),
@@ -40,14 +40,16 @@ websocket_init(_Type, Req, _Opts) ->
             Req2
     end,
 
-    {ok, Conn} = supervisor:start_child(erlmud_conn_sup, [self()]),
+    {ok, Mode} = supervisor:start_child(erlvim_mode_sup, [self()]),
 
     io:format("Websocket handler websocket_init end (~p)~n", [self()]),
-    {ok, Req3, #state{conn = Conn}}.
+    {ok, Req3, #state{mode = Mode}}.
 
-websocket_handle({text, Text}, Req, State) ->
-    io:format("Websocket: from Web page: {~p, ~p}~n", [text, Text]),
-    erlvim:handle(Text),
+websocket_handle({text, <<${, _/binary>> = JSON}, Req, State = #state{mode = Mode}) ->
+    io:format("Websocket: from Web page: {~p, ~p}~n", [text, JSON]),
+    KeyEvent = jsx:decode(JSON),
+    io:format("Websocket: from Web page: KeyEvent: ~p~n", [KeyEvent]),
+    gen_server:cast(Mode, KeyEvent),
     {ok, Req, State};
 websocket_handle({FrameType, FrameContent}, Req, State) ->
     io:format("Websocket: from Web page: {~p, ~p}~n", [FrameType, FrameContent]),
@@ -56,9 +58,9 @@ websocket_handle(X, Req, State) ->
     io:format("Received ~p~n", X),
     {ok, Req, State}.
 
-websocket_info({send, Msg}, Req, State) ->
+websocket_info({send, Msg, Mode}, Req, State) ->
     io:format("Websocket: from erlang: ~p~n", [Msg]),
-    {reply, {text, [Msg]}, Req, State};
+    {reply, {text, [Msg]}, Req, State#state{mode = Mode}};
 websocket_info(ErlangMessage, Req, State) ->
     io:format("websocket_info(~p, ~p, ~p)~n", [ErlangMessage, Req, State]),
     {reply, {text, [ErlangMessage]}, Req, State}.

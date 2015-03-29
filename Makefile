@@ -1,3 +1,3 @@
 PROJECT = erlvim
-DEPS = cowboy
+DEPS = cowboy jsx
 include erlang.mk

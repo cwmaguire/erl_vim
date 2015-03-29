@@ -19,3 +19,4 @@ Ideas:
 * make -f erlang.mk bootstrap
 * add cowboy to Makefile DEPS
 * copy source from erl_mud
+* make new t=gen_server n=erlvim
