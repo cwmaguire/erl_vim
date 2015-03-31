@@ -47,7 +47,7 @@ websocket_init(_Type, Req, _Opts) ->
 
 websocket_handle({text, <<${, _/binary>> = JSON}, Req, State = #state{mode = Mode}) ->
     io:format("Websocket: from Web page: {~p, ~p}~n", [text, JSON]),
-    KeyEvent = jsx:decode(JSON),
+    KeyEvent = parse_key_event(jsx:decode(JSON)),
     io:format("Websocket: from Web page: KeyEvent: ~p~n", [KeyEvent]),
     gen_server:cast(Mode, KeyEvent),
     {ok, Req, State};
@@ -73,3 +73,7 @@ handle(Req, State=#state{}) ->
 
 terminate(_Reason, _Req, _State) ->
     ok.
+
+parse_key_event(JsonObj) ->
+    [<<Key:1, _/binary>>, Shift, Ctrl] = [proplists:get_value(Key, JsonObj) || Key <- [<<"key">>, <<"shift">>, <<"ctrl">>]],
+    [Key, Shift, Ctrl].
